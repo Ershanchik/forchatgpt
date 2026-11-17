@@ -1,4 +1,4 @@
-name: Verify Tax Calculator with real Tekton Pipeline
+name: Verify Tax Calculator with real Tekton Pipeline (PVC shared)
 on:
   push:
     branches: [main]
