@@ -1,0 +1,18 @@
+$ docker load -i /tmp/tekton-image.tar
+Loaded image: tax-calculator:tekton-test
+$ docker run -d -p 8080:80 --name tekton-built-tax-calculator tax-calculator:tekton-test
+3299ed96c538d98ab1e0ad01b1023cd2987f3efbf9ab04cfadcbbf953fe1ac31
+$ docker ps --filter name=tekton-built-tax-calculator
+CONTAINER ID   IMAGE                        COMMAND                  CREATED         STATUS                  PORTS                                     NAMES
+3299ed96c538   tax-calculator:tekton-test   "/docker-entrypoint.…"   2 seconds ago   Up Less than a second   0.0.0.0:8080->80/tcp, [::]:8080->80/tcp   tekton-built-tax-calculator
+$ curl -I http://localhost:8080/
+HTTP/1.1 200 OK
+Server: nginx/1.31.8
+Date: Tue, 17 Nov 2026 12:29:46 GMT
+Content-Type: text/html
+Content-Length: 996
+Last-Modified: Tue, 17 Nov 2026 12:29:33 GMT
+Connection: keep-alive
+ETag: "6afc48ad-3e4"
+Accept-Ranges: bytes
+

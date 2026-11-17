@@ -1,36 +1,36 @@
 $ kubectl get tasks,pipelines,pipelineruns
 NAME                           AGE
-task.tekton.dev/git-clone      51s
-task.tekton.dev/jasmine        51s
-task.tekton.dev/kaniko-local   51s
-task.tekton.dev/npm            52s
+task.tekton.dev/git-clone      46s
+task.tekton.dev/jasmine        46s
+task.tekton.dev/kaniko-local   46s
+task.tekton.dev/npm            46s
 
 NAME                                          AGE
-pipeline.tekton.dev/tax-calculator-pipeline   51s
+pipeline.tekton.dev/tax-calculator-pipeline   46s
 
 NAME                                              SUCCEEDED   REASON      STARTTIME   COMPLETIONTIME
-pipelinerun.tekton.dev/tax-calculator-run-6rs7p   True        Succeeded   51s         5s
+pipelinerun.tekton.dev/tax-calculator-run-4k7j6   True        Succeeded   46s         5s
 
 $ kubectl get taskruns -o wide
 NAME                                  SUCCEEDED   REASON      STARTTIME   COMPLETIONTIME
-tax-calculator-run-6rs7p-build        True        Succeeded   16s         5s
-tax-calculator-run-6rs7p-clone        True        Succeeded   51s         32s
-tax-calculator-run-6rs7p-npminstall   True        Succeeded   32s         22s
-tax-calculator-run-6rs7p-tests        True        Succeeded   22s         16s
+tax-calculator-run-4k7j6-build        True        Succeeded   12s         5s
+tax-calculator-run-4k7j6-clone        True        Succeeded   46s         28s
+tax-calculator-run-4k7j6-npminstall   True        Succeeded   28s         18s
+tax-calculator-run-4k7j6-tests        True        Succeeded   18s         12s
 
-$ kubectl describe pipelinerun tax-calculator-run-6rs7p
-Name:         tax-calculator-run-6rs7p
+$ kubectl describe pipelinerun tax-calculator-run-4k7j6
+Name:         tax-calculator-run-4k7j6
 Namespace:    default
 Labels:       tekton.dev/pipeline=tax-calculator-pipeline
 Annotations:  <none>
 API Version:  tekton.dev/v1
 Kind:         PipelineRun
 Metadata:
-  Creation Timestamp:  2026-11-17T12:24:40Z
+  Creation Timestamp:  2026-11-17T12:28:54Z
   Generate Name:       tax-calculator-run-
   Generation:          1
-  Resource Version:    1112
-  UID:                 8459d4dc-5264-47b7-80d9-cce2f6b7a141
+  Resource Version:    1094
+  UID:                 6f748fdb-ffc3-4840-8f84-e1119ff279aa
 Spec:
   Params:
     Name:   repo-url
@@ -58,23 +58,23 @@ Status:
   Child References:
     API Version:         tekton.dev/v1
     Kind:                TaskRun
-    Name:                tax-calculator-run-6rs7p-clone
+    Name:                tax-calculator-run-4k7j6-clone
     Pipeline Task Name:  clone
     API Version:         tekton.dev/v1
     Kind:                TaskRun
-    Name:                tax-calculator-run-6rs7p-npminstall
+    Name:                tax-calculator-run-4k7j6-npminstall
     Pipeline Task Name:  npminstall
     API Version:         tekton.dev/v1
     Kind:                TaskRun
-    Name:                tax-calculator-run-6rs7p-tests
+    Name:                tax-calculator-run-4k7j6-tests
     Pipeline Task Name:  tests
     API Version:         tekton.dev/v1
     Kind:                TaskRun
-    Name:                tax-calculator-run-6rs7p-build
+    Name:                tax-calculator-run-4k7j6-build
     Pipeline Task Name:  build
-  Completion Time:       2026-11-17T12:25:26Z
+  Completion Time:       2026-11-17T12:29:35Z
   Conditions:
-    Last Transition Time:  2026-11-17T12:25:26Z
+    Last Transition Time:  2026-11-17T12:29:35Z
     Message:               Tasks Completed: 4 (Failed: 0, Cancelled 0), Skipped: 0
     Reason:                Succeeded
     Status:                True
@@ -143,60 +143,60 @@ Status:
       Send Cloud Events For Runs:             true
       Set Security Context:                   true
       Verification No Match Policy:           ignore
-  Start Time:                                 2026-11-17T12:24:40Z
+  Start Time:                                 2026-11-17T12:28:54Z
 Events:
-  Type    Reason     Age   From         Message
-  ----    ------     ----  ----         -------
-  Normal  Started    51s   PipelineRun  
-  Normal  Running    51s   PipelineRun  Tasks Completed: 0 (Failed: 0, Cancelled 0), Incomplete: 4, Skipped: 0
-  Normal  Running    32s   PipelineRun  Tasks Completed: 1 (Failed: 0, Cancelled 0), Incomplete: 3, Skipped: 0
-  Normal  Running    22s   PipelineRun  Tasks Completed: 2 (Failed: 0, Cancelled 0), Incomplete: 2, Skipped: 0
-  Normal  Running    16s   PipelineRun  Tasks Completed: 3 (Failed: 0, Cancelled 0), Incomplete: 1, Skipped: 0
-  Normal  Succeeded  5s    PipelineRun  Tasks Completed: 4 (Failed: 0, Cancelled 0), Skipped: 0
+  Type    Reason     Age                From         Message
+  ----    ------     ----               ----         -------
+  Normal  Started    46s                PipelineRun  
+  Normal  Running    46s                PipelineRun  Tasks Completed: 0 (Failed: 0, Cancelled 0), Incomplete: 4, Skipped: 0
+  Normal  Running    28s                PipelineRun  Tasks Completed: 1 (Failed: 0, Cancelled 0), Incomplete: 3, Skipped: 0
+  Normal  Running    18s                PipelineRun  Tasks Completed: 2 (Failed: 0, Cancelled 0), Incomplete: 2, Skipped: 0
+  Normal  Running    12s (x2 over 12s)  PipelineRun  Tasks Completed: 3 (Failed: 0, Cancelled 0), Incomplete: 1, Skipped: 0
+  Normal  Succeeded  5s                 PipelineRun  Tasks Completed: 4 (Failed: 0, Cancelled 0), Skipped: 0
 
-$ kubectl logs for tasks in PipelineRun tax-calculator-run-6rs7p
-=== pod/tax-calculator-run-6rs7p-build-pod ===
-[pod/tax-calculator-run-6rs7p-build-pod/prepare] 2026/11/17 12:25:16 Entrypoint initialization
-[pod/tax-calculator-run-6rs7p-build-pod/step-build-image] [36mINFO[0m[0000] Retrieving image manifest nginx              
-[pod/tax-calculator-run-6rs7p-build-pod/step-build-image] [36mINFO[0m[0000] Retrieving image nginx from registry index.docker.io 
-[pod/tax-calculator-run-6rs7p-build-pod/step-build-image] [36mINFO[0m[0000] Built cross stage deps: map[]                
-[pod/tax-calculator-run-6rs7p-build-pod/step-build-image] [36mINFO[0m[0000] Retrieving image manifest nginx              
-[pod/tax-calculator-run-6rs7p-build-pod/step-build-image] [36mINFO[0m[0000] Returning cached image manifest              
-[pod/tax-calculator-run-6rs7p-build-pod/step-build-image] [36mINFO[0m[0000] Executing 0 build triggers                   
-[pod/tax-calculator-run-6rs7p-build-pod/step-build-image] [36mINFO[0m[0000] Building stage 'nginx' [idx: '0', base-idx: '-1'] 
-[pod/tax-calculator-run-6rs7p-build-pod/step-build-image] [36mINFO[0m[0000] Unpacking rootfs as cmd COPY favicon.ico /usr/share/nginx/html/favicon.ico requires it. 
-[pod/tax-calculator-run-6rs7p-build-pod/step-build-image] [36mINFO[0m[0003] COPY favicon.ico /usr/share/nginx/html/favicon.ico 
-[pod/tax-calculator-run-6rs7p-build-pod/step-build-image] [36mINFO[0m[0003] Taking snapshot of files...                  
-[pod/tax-calculator-run-6rs7p-build-pod/step-build-image] [36mINFO[0m[0003] COPY index.html /usr/share/nginx/html/index.html 
-[pod/tax-calculator-run-6rs7p-build-pod/step-build-image] [36mINFO[0m[0003] Taking snapshot of files...                  
-[pod/tax-calculator-run-6rs7p-build-pod/step-build-image] [36mINFO[0m[0003] COPY script.js /usr/share/nginx/html/script.js 
-[pod/tax-calculator-run-6rs7p-build-pod/step-build-image] [36mINFO[0m[0003] Taking snapshot of files...                  
-[pod/tax-calculator-run-6rs7p-build-pod/step-build-image] [36mINFO[0m[0003] COPY style.css /usr/share/nginx/html/style.css 
-[pod/tax-calculator-run-6rs7p-build-pod/step-build-image] [36mINFO[0m[0003] Taking snapshot of files...                  
-[pod/tax-calculator-run-6rs7p-build-pod/step-build-image] [36mINFO[0m[0003] COPY taxCalculator.js /usr/share/nginx/html/taxCalculator.js 
-[pod/tax-calculator-run-6rs7p-build-pod/step-build-image] [36mINFO[0m[0003] Taking snapshot of files...                  
-[pod/tax-calculator-run-6rs7p-build-pod/step-build-image] [36mINFO[0m[0003] Skipping push to container registry due to --no-push flag 
-=== pod/tax-calculator-run-6rs7p-clone-pod ===
-[pod/tax-calculator-run-6rs7p-clone-pod/prepare] 2026/11/17 12:24:50 Entrypoint initialization
-[pod/tax-calculator-run-6rs7p-clone-pod/place-scripts] 2026/11/17 12:24:52 Decoded script /tekton/scripts/script-0-xlstv
-[pod/tax-calculator-run-6rs7p-clone-pod/step-clone-repository] Cloning into '.'...
-=== pod/tax-calculator-run-6rs7p-npminstall-pod ===
-[pod/tax-calculator-run-6rs7p-npminstall-pod/prepare] 2026/11/17 12:25:00 Entrypoint initialization
-[pod/tax-calculator-run-6rs7p-npminstall-pod/place-scripts] 2026/11/17 12:25:01 Decoded script /tekton/scripts/script-0-6gxkb
-[pod/tax-calculator-run-6rs7p-npminstall-pod/step-install-dependencies] npm warn deprecated glob@10.5.0: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
-[pod/tax-calculator-run-6rs7p-npminstall-pod/step-install-dependencies] 
-[pod/tax-calculator-run-6rs7p-npminstall-pod/step-install-dependencies] added 43 packages in 1s
-[pod/tax-calculator-run-6rs7p-npminstall-pod/step-install-dependencies] npm notice
-[pod/tax-calculator-run-6rs7p-npminstall-pod/step-install-dependencies] npm notice New major version of npm available! 10.9.9 -> 12.2.2
-[pod/tax-calculator-run-6rs7p-npminstall-pod/step-install-dependencies] npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.2
-[pod/tax-calculator-run-6rs7p-npminstall-pod/step-install-dependencies] npm notice To update run: npm install -g npm@12.2.2
-[pod/tax-calculator-run-6rs7p-npminstall-pod/step-install-dependencies] npm notice
-=== pod/tax-calculator-run-6rs7p-tests-pod ===
-[pod/tax-calculator-run-6rs7p-tests-pod/prepare] 2026/11/17 12:25:10 Entrypoint initialization
-[pod/tax-calculator-run-6rs7p-tests-pod/place-scripts] 2026/11/17 12:25:11 Decoded script /tekton/scripts/script-0-dk8z8
-[pod/tax-calculator-run-6rs7p-tests-pod/step-run-unit-tests] Started
-[pod/tax-calculator-run-6rs7p-tests-pod/step-run-unit-tests] .......
-[pod/tax-calculator-run-6rs7p-tests-pod/step-run-unit-tests] 
-[pod/tax-calculator-run-6rs7p-tests-pod/step-run-unit-tests] 
-[pod/tax-calculator-run-6rs7p-tests-pod/step-run-unit-tests] 7 specs, 0 failures
-[pod/tax-calculator-run-6rs7p-tests-pod/step-run-unit-tests] Finished in 0.006 seconds
+$ kubectl logs for tasks in PipelineRun tax-calculator-run-4k7j6
+=== pod/tax-calculator-run-4k7j6-build-pod ===
+[pod/tax-calculator-run-4k7j6-build-pod/prepare] 2026/11/17 12:29:28 Entrypoint initialization
+[pod/tax-calculator-run-4k7j6-build-pod/step-build-image] [36mINFO[0m[0000] Retrieving image manifest nginx              
+[pod/tax-calculator-run-4k7j6-build-pod/step-build-image] [36mINFO[0m[0000] Retrieving image nginx from registry index.docker.io 
+[pod/tax-calculator-run-4k7j6-build-pod/step-build-image] [36mINFO[0m[0000] Built cross stage deps: map[]                
+[pod/tax-calculator-run-4k7j6-build-pod/step-build-image] [36mINFO[0m[0000] Retrieving image manifest nginx              
+[pod/tax-calculator-run-4k7j6-build-pod/step-build-image] [36mINFO[0m[0000] Returning cached image manifest              
+[pod/tax-calculator-run-4k7j6-build-pod/step-build-image] [36mINFO[0m[0000] Executing 0 build triggers                   
+[pod/tax-calculator-run-4k7j6-build-pod/step-build-image] [36mINFO[0m[0000] Building stage 'nginx' [idx: '0', base-idx: '-1'] 
+[pod/tax-calculator-run-4k7j6-build-pod/step-build-image] [36mINFO[0m[0000] Unpacking rootfs as cmd COPY favicon.ico /usr/share/nginx/html/favicon.ico requires it. 
+[pod/tax-calculator-run-4k7j6-build-pod/step-build-image] [36mINFO[0m[0002] COPY favicon.ico /usr/share/nginx/html/favicon.ico 
+[pod/tax-calculator-run-4k7j6-build-pod/step-build-image] [36mINFO[0m[0002] Taking snapshot of files...                  
+[pod/tax-calculator-run-4k7j6-build-pod/step-build-image] [36mINFO[0m[0002] COPY index.html /usr/share/nginx/html/index.html 
+[pod/tax-calculator-run-4k7j6-build-pod/step-build-image] [36mINFO[0m[0002] Taking snapshot of files...                  
+[pod/tax-calculator-run-4k7j6-build-pod/step-build-image] [36mINFO[0m[0002] COPY script.js /usr/share/nginx/html/script.js 
+[pod/tax-calculator-run-4k7j6-build-pod/step-build-image] [36mINFO[0m[0002] Taking snapshot of files...                  
+[pod/tax-calculator-run-4k7j6-build-pod/step-build-image] [36mINFO[0m[0002] COPY style.css /usr/share/nginx/html/style.css 
+[pod/tax-calculator-run-4k7j6-build-pod/step-build-image] [36mINFO[0m[0002] Taking snapshot of files...                  
+[pod/tax-calculator-run-4k7j6-build-pod/step-build-image] [36mINFO[0m[0002] COPY taxCalculator.js /usr/share/nginx/html/taxCalculator.js 
+[pod/tax-calculator-run-4k7j6-build-pod/step-build-image] [36mINFO[0m[0002] Taking snapshot of files...                  
+[pod/tax-calculator-run-4k7j6-build-pod/step-build-image] [36mINFO[0m[0002] Skipping push to container registry due to --no-push flag 
+=== pod/tax-calculator-run-4k7j6-clone-pod ===
+[pod/tax-calculator-run-4k7j6-clone-pod/step-clone-repository] Cloning into '.'...
+[pod/tax-calculator-run-4k7j6-clone-pod/prepare] 2026/11/17 12:29:03 Entrypoint initialization
+[pod/tax-calculator-run-4k7j6-clone-pod/place-scripts] 2026/11/17 12:29:05 Decoded script /tekton/scripts/script-0-rzmh9
+=== pod/tax-calculator-run-4k7j6-npminstall-pod ===
+[pod/tax-calculator-run-4k7j6-npminstall-pod/step-install-dependencies] npm warn deprecated glob@10.5.0: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
+[pod/tax-calculator-run-4k7j6-npminstall-pod/step-install-dependencies] 
+[pod/tax-calculator-run-4k7j6-npminstall-pod/step-install-dependencies] added 43 packages in 1s
+[pod/tax-calculator-run-4k7j6-npminstall-pod/step-install-dependencies] npm notice
+[pod/tax-calculator-run-4k7j6-npminstall-pod/step-install-dependencies] npm notice New major version of npm available! 10.9.9 -> 12.2.2
+[pod/tax-calculator-run-4k7j6-npminstall-pod/step-install-dependencies] npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.2
+[pod/tax-calculator-run-4k7j6-npminstall-pod/step-install-dependencies] npm notice To update run: npm install -g npm@12.2.2
+[pod/tax-calculator-run-4k7j6-npminstall-pod/step-install-dependencies] npm notice
+[pod/tax-calculator-run-4k7j6-npminstall-pod/prepare] 2026/11/17 12:29:12 Entrypoint initialization
+[pod/tax-calculator-run-4k7j6-npminstall-pod/place-scripts] 2026/11/17 12:29:13 Decoded script /tekton/scripts/script-0-smjpp
+=== pod/tax-calculator-run-4k7j6-tests-pod ===
+[pod/tax-calculator-run-4k7j6-tests-pod/step-run-unit-tests] Started
+[pod/tax-calculator-run-4k7j6-tests-pod/step-run-unit-tests] .......
+[pod/tax-calculator-run-4k7j6-tests-pod/step-run-unit-tests] 
+[pod/tax-calculator-run-4k7j6-tests-pod/step-run-unit-tests] 
+[pod/tax-calculator-run-4k7j6-tests-pod/step-run-unit-tests] 7 specs, 0 failures
+[pod/tax-calculator-run-4k7j6-tests-pod/step-run-unit-tests] Finished in 0.004 seconds
+[pod/tax-calculator-run-4k7j6-tests-pod/prepare] 2026/11/17 12:29:22 Entrypoint initialization
+[pod/tax-calculator-run-4k7j6-tests-pod/place-scripts] 2026/11/17 12:29:23 Decoded script /tekton/scripts/script-0-6vk5s
