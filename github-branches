@@ -1,5 +1,8 @@
 $ git branch -avv
-  bug-fix-typo                8eddc17 [origin/bug-fix-typo] Fix unclear units in simple interest example
-* main                        bef3a50 [origin/main: ahead 2] Merge branch 'bug-fix-typo'
-  remotes/origin/bug-fix-typo 8eddc17 Fix unclear units in simple interest example
-  remotes/origin/main         e601f31 Record CLI outputs for Git final project
+  bug-fix-revert                d917488 [origin/bug-fix-revert] Revert change to simple interest example wording
+  bug-fix-typo                  8eddc17 [origin/bug-fix-typo] Fix unclear units in simple interest example
+* main                          ed43ed9 [origin/main] Capture current Git status for three project branches
+  remotes/origin/HEAD           -> origin/main
+  remotes/origin/bug-fix-revert d917488 Revert change to simple interest example wording
+  remotes/origin/bug-fix-typo   8eddc17 Fix unclear units in simple interest example
+  remotes/origin/main           ed43ed9 Capture current Git status for three project branches
