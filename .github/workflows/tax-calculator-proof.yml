@@ -1,0 +1,62 @@
+name: Verify Tax Calculator (Jasmine and Docker)
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/tax-calculator-proof.yml
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install and run seven Jasmine tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd tax-calculator
+          npm install --no-audit --no-fund
+          {
+            echo '$ npx jasmine'
+            npx jasmine
+          } 2>&1 | tee 01-jasmine-tests-passing
+          grep -Eq '7 specs, 0 failures' 01-jasmine-tests-passing
+      - name: Build Docker image
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd tax-calculator
+          {
+            echo '$ docker build -t tax-calculator .'
+            docker build -t tax-calculator .
+          } 2>&1 | tee 03-docker-build-output
+      - name: Launch and verify on port 8080
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd tax-calculator
+          docker run -d --name tax-calculator -p 8080:80 tax-calculator
+          for i in $(seq 1 15); do
+            if curl -fsS http://localhost:8080/ -o /dev/null; then break; fi
+            sleep 1
+          done
+          curl -fsS http://localhost:8080/ | grep -q 'Tax Calculator'
+          {
+            echo '$ docker ps'
+            docker ps
+          } 2>&1 | tee 04-docker-image
+          grep -q '8080->80/tcp' 04-docker-image
+      - name: Commit successful evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add tax-calculator/01-jasmine-tests-passing tax-calculator/03-docker-build-output tax-calculator/04-docker-image
+          git commit -m 'Save verified Jasmine and Docker terminal output [skip ci]'
+          git push origin main

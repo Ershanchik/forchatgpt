@@ -1,0 +1,8 @@
+{
+  "name": "tax-calculator",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Tax Calculator demonstration for a cloud-native DevOps course",
+  "scripts": { "test": "jasmine" },
+  "devDependencies": { "jasmine": "^5.9.0" }
+}
