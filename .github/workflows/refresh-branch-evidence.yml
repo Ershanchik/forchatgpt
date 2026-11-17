@@ -1,0 +1,41 @@
+name: Refresh git branch evidence
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/refresh-branch-evidence.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout full repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Capture all three branches with statuses
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin --prune
+          git checkout -B bug-fix-typo origin/bug-fix-typo
+          git checkout -B bug-fix-revert origin/bug-fix-revert
+          git checkout main
+          git branch --set-upstream-to=origin/main main
+          {
+            echo '$ git branch -avv'
+            git branch -avv
+          } | tee github-branches
+          grep -q 'bug-fix-typo' github-branches
+          grep -q 'bug-fix-revert' github-branches
+          grep -q 'main' github-branches
+          git add github-branches
+          git commit -m "Refresh three-branch CLI evidence [skip ci]"
+          git push origin main
