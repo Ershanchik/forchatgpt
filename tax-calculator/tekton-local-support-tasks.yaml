@@ -1,0 +1,40 @@
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: git-clone
+spec:
+  params:
+    - name: url
+      type: string
+  workspaces:
+    - name: output
+  steps:
+    - name: clone-repository
+      image: alpine/git:2.49.0
+      workingDir: $(workspaces.output.path)
+      script: |
+        #!/bin/sh
+        set -eu
+        git clone --depth 1 "$(params.url)" .
+        test -f tax-calculator/package.json
+---
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: kaniko-local
+spec:
+  params:
+    - name: IMAGE
+      type: string
+  workspaces:
+    - name: source
+  steps:
+    - name: build-image
+      image: gcr.io/kaniko-project/executor:v1.23.2
+      command: ["/kaniko/executor"]
+      args:
+        - --dockerfile=$(workspaces.source.path)/tax-calculator/Dockerfile
+        - --context=dir://$(workspaces.source.path)/tax-calculator
+        - --destination=$(params.IMAGE)
+        - --no-push
+        - --tar-path=$(workspaces.source.path)/tax-calculator/tekton-image.tar
