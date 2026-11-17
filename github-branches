@@ -1,0 +1,5 @@
+$ git branch -avv
+  bug-fix-typo                0df1375 [origin/bug-fix-typo] Add workflow to capture authentic Git CLI assignment evidence
+* main                        0df1375 [origin/main] Add workflow to capture authentic Git CLI assignment evidence
+  remotes/origin/bug-fix-typo 0df1375 Add workflow to capture authentic Git CLI assignment evidence
+  remotes/origin/main         0df1375 Add workflow to capture authentic Git CLI assignment evidence
