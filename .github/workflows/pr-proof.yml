@@ -1,0 +1,36 @@
+name: Capture pull request and fork evidence
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/pr-proof.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  capture-pr-evidence:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run curl and save pull-request proof
+        shell: bash
+        run: |
+          set -euo pipefail
+          {
+            echo '$ curl -sS -f -L https://api.github.com/repos/Ershanchik/mcino-Introduction-to-Git-and-GitHub/pulls/1 | jq "{number, state, html_url, head: {ref: .head.ref, repo: .head.repo.full_name, fork: .head.repo.fork}, base: {ref: .base.ref, repo: .base.repo.full_name}}"'
+            curl -sS -f -L https://api.github.com/repos/Ershanchik/mcino-Introduction-to-Git-and-GitHub/pulls/1 | jq '{number, state, html_url, head: {ref: .head.ref, repo: .head.repo.full_name, fork: .head.repo.fork}, base: {ref: .base.ref, repo: .base.repo.full_name}}'
+            echo
+            echo '$ curl -sS -f -L https://api.github.com/repos/Ershanchik/mcino-Introduction-to-Git-and-GitHub | jq "{full_name, fork, parent: .parent.full_name}"'
+            curl -sS -f -L https://api.github.com/repos/Ershanchik/mcino-Introduction-to-Git-and-GitHub | jq '{full_name, fork, parent: .parent.full_name}'
+          } | tee bug-fix-revert
+          grep -q '"fork": true' bug-fix-revert
+          grep -q '"head"' bug-fix-revert
+          grep -q '"number": 1' bug-fix-revert
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add bug-fix-revert
+          git commit -m "Record verified PR and fork evidence [skip ci]"
+          git push origin main
