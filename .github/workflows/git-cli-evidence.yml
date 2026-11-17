@@ -1,0 +1,46 @@
+name: Git CLI assignment evidence
+
+on:
+  push:
+    branches:
+      - bug-fix-typo
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  record-git-cli-evidence:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out full repository history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Merge assignment branch and record real command output
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          {
+            echo '$ git checkout main'
+            git checkout main
+            echo '$ git merge bug-fix-typo'
+            git merge bug-fix-typo
+          } 2>&1 | tee merge_branches
+          {
+            echo '$ git branch -avv'
+            git branch -avv
+          } 2>&1 | tee github-branches
+          git push origin main
+          git add merge_branches github-branches
+          git commit -m "Record CLI outputs for Git final project"
+          git push origin main
+      - name: Upload terminal output as an artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: git-cli-evidence
+          path: |
+            merge_branches
+            github-branches
