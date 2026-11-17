@@ -1,4 +1,4 @@
-name: Verify Tax Calculator with real Tekton Pipeline (PVC shared)
+name: Verify Tax Calculator with Tekton and image screenshot
 on:
   push:
     branches: [main]
@@ -73,6 +73,47 @@ jobs:
               done
             fi
           } | tee tax-calculator/09-tekton-pipeline-output
+      - name: Run Tekton-built image locally and screenshot the real app
+        if: env.TEKTON_SUCCESS == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          PVC=$(kubectl get pvc -o jsonpath='{.items[0].metadata.name}')
+          test -n "$PVC"
+          cat <<EOF | kubectl apply -f -
+          apiVersion: v1
+          kind: Pod
+          metadata:
+            name: artifact-reader
+          spec:
+            containers:
+              - name: reader
+                image: alpine:3.20
+                command: ["/bin/sh", "-c", "sleep 1800"]
+                volumeMounts:
+                  - name: artifact
+                    mountPath: /mnt/artifact
+            volumes:
+              - name: artifact
+                persistentVolumeClaim:
+                  claimName: $PVC
+          EOF
+          kubectl wait --for=condition=Ready pod/artifact-reader --timeout=180s
+          kubectl cp artifact-reader:/mnt/artifact/tax-calculator/tekton-image.tar /tmp/tekton-image.tar
+          {
+            echo '$ docker load -i /tmp/tekton-image.tar'
+            docker load -i /tmp/tekton-image.tar
+            echo '$ docker run -d -p 8080:80 --name tekton-built-tax-calculator tax-calculator:tekton-test'
+            docker run -d -p 8080:80 --name tekton-built-tax-calculator tax-calculator:tekton-test
+            echo '$ docker ps --filter name=tekton-built-tax-calculator'
+            docker ps --filter name=tekton-built-tax-calculator
+            echo '$ curl -I http://localhost:8080/'
+            curl --retry 15 --retry-delay 2 --retry-connrefused -fsSI http://localhost:8080/
+          } 2>&1 | tee tax-calculator/10-local-deployment-evidence
+          CHROME=$(command -v google-chrome || command -v google-chrome-stable || command -v chromium)
+          "$CHROME" --headless=new --no-sandbox --disable-dev-shm-usage --disable-gpu --window-size=1440,900 --screenshot="$PWD/tax-calculator/10-final-output.png" http://localhost:8080/
+          test -s tax-calculator/10-final-output.png
+          echo "LOCAL_SCREENSHOT_SUCCESS=true" >> "$GITHUB_ENV"
       - name: Save verified run to GitHub
         if: env.TEKTON_SUCCESS == 'true'
         shell: bash
@@ -80,7 +121,7 @@ jobs:
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add tax-calculator/09-tekton-pipeline-output
+          git add tax-calculator/09-tekton-pipeline-output tax-calculator/10-final-output.png tax-calculator/10-local-deployment-evidence
           git commit -m "Save successful Tekton PipelineRun evidence [skip ci]"
           git push origin main
       - name: Upload logs for inspection
