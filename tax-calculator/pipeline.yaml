@@ -9,7 +9,7 @@ spec:
       description: Git repository containing the tax-calculator directory
     - name: image
       type: string
-      description: Destination container image URL
+      description: Build target image reference; test build intentionally does not push
   workspaces:
     - name: shared
   tasks:
@@ -39,14 +39,10 @@ spec:
     - name: build
       runAfter: [tests]
       taskRef:
-        name: buildah
+        name: kaniko-local
       params:
         - name: IMAGE
           value: $(params.image)
-        - name: DOCKERFILE
-          value: ./tax-calculator/Dockerfile
-        - name: CONTEXT
-          value: ./tax-calculator
       workspaces:
         - name: source
           workspace: shared
