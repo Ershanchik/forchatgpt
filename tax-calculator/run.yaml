@@ -12,4 +12,9 @@ spec:
       value: tax-calculator:tekton-test
   workspaces:
     - name: shared
-      emptyDir: {}
+      volumeClaimTemplate:
+        spec:
+          accessModes: [ReadWriteOnce]
+          resources:
+            requests:
+              storage: 1Gi
