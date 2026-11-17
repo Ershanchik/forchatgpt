@@ -1,0 +1,92 @@
+name: Verify Tax Calculator with real Tekton Pipeline
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/tekton-local-proof.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  tekton:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Start a local Kubernetes cluster
+        uses: helm/kind-action@v1.12.0
+      - name: Install Tekton Pipelines
+        shell: bash
+        run: |
+          set -euxo pipefail
+          kubectl apply -f https://infra.tekton.dev/tekton-releases/pipeline/previous/v1.16.0/release.yaml
+          kubectl rollout status -n tekton-pipelines deployment/tekton-pipelines-controller --timeout=300s
+          kubectl rollout status -n tekton-pipelines deployment/tekton-pipelines-webhook --timeout=300s
+          kubectl get pods -n tekton-pipelines
+      - name: Apply course YAML and run real PipelineRun
+        shell: bash
+        run: |
+          set -euo pipefail
+          kubectl apply -f tax-calculator/tasks.yaml
+          kubectl apply -f tax-calculator/tekton-local-support-tasks.yaml
+          kubectl apply -f tax-calculator/pipeline.yaml
+          RUN_RESOURCE=$(kubectl create -f tax-calculator/run.yaml -o name)
+          RUN="${RUN_RESOURCE##*/}"
+          echo "$RUN" > /tmp/tekton-pipelinerun-name
+          echo "Created $RUN_RESOURCE"
+          for i in {1..120}; do
+            RESULT=$(kubectl get pipelinerun "$RUN" -o jsonpath='{.status.conditions[?(@.type=="Succeeded")].status}' 2>/dev/null || true)
+            REASON=$(kubectl get pipelinerun "$RUN" -o jsonpath='{.status.conditions[?(@.type=="Succeeded")].reason}' 2>/dev/null || true)
+            echo "check $i: status=$RESULT reason=$REASON"
+            if [ "$RESULT" = "True" ]; then
+              echo "TEKTON_SUCCESS=true" >> "$GITHUB_ENV"
+              exit 0
+            elif [ "$RESULT" = "False" ]; then
+              exit 1
+            fi
+            sleep 5
+          done
+          echo "Tekton PipelineRun did not finish in time" >&2
+          exit 1
+      - name: Capture true Tekton execution evidence
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo '$ kubectl get tasks,pipelines,pipelineruns'
+            kubectl get tasks,pipelines,pipelineruns -o wide || true
+            echo
+            echo '$ kubectl get taskruns -o wide'
+            kubectl get taskruns -o wide || true
+            echo
+            RUN=$(cat /tmp/tekton-pipelinerun-name 2>/dev/null || true)
+            if [ -n "$RUN" ]; then
+              echo "$ kubectl describe pipelinerun $RUN"
+              kubectl describe pipelinerun "$RUN" || true
+              echo
+              echo "$ kubectl logs for tasks in PipelineRun $RUN"
+              for pod in $(kubectl get pods -l "tekton.dev/pipelineRun=$RUN" -o name 2>/dev/null); do
+                echo "=== $pod ==="
+                kubectl logs "$pod" --all-containers --prefix --max-log-requests=15 || true
+              done
+            fi
+          } | tee tax-calculator/09-tekton-pipeline-output
+      - name: Save verified run to GitHub
+        if: env.TEKTON_SUCCESS == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tax-calculator/09-tekton-pipeline-output
+          git commit -m "Save successful Tekton PipelineRun evidence [skip ci]"
+          git push origin main
+      - name: Upload logs for inspection
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tekton-local-execution
+          path: tax-calculator/09-tekton-pipeline-output
+          if-no-files-found: warn
