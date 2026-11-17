@@ -1,0 +1,193 @@
+name: Deploy Tekton-built Tax Calculator to IBM Cloud
+
+on:
+  workflow_dispatch:
+    inputs:
+      ibm_region:
+        description: IBM Cloud region (for example us-south)
+        type: string
+        required: true
+        default: us-south
+      resource_group:
+        description: Existing IBM Cloud resource group
+        type: string
+        required: true
+        default: Default
+      registry_host:
+        description: IBM Container Registry hostname
+        type: string
+        required: true
+        default: us.icr.io
+      registry_region:
+        description: IBM Container Registry region
+        type: string
+        required: true
+        default: us-south
+      registry_namespace:
+        description: Your existing IBM Container Registry namespace
+        type: string
+        required: true
+      code_engine_project:
+        description: Your existing IBM Code Engine project
+        type: string
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  ibm-cloud:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      IBM_CLOUD_API_KEY: ${{ secrets.IBM_CLOUD_API_KEY }}
+      IBM_REGION: ${{ inputs.ibm_region }}
+      RESOURCE_GROUP: ${{ inputs.resource_group }}
+      REGISTRY_HOST: ${{ inputs.registry_host }}
+      REGISTRY_REGION: ${{ inputs.registry_region }}
+      REGISTRY_NAMESPACE: ${{ inputs.registry_namespace }}
+      CODE_ENGINE_PROJECT: ${{ inputs.code_engine_project }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify required IBM Cloud connection
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "$IBM_CLOUD_API_KEY" ]; then
+            echo "::error::Configure the IBM_CLOUD_API_KEY repository secret before running this workflow."
+            exit 1
+          fi
+          test -n "$REGISTRY_NAMESPACE"
+          test -n "$CODE_ENGINE_PROJECT"
+      - name: Start local Kubernetes cluster for Tekton
+        uses: helm/kind-action@v1.12.0
+      - name: Install Tekton Pipelines
+        shell: bash
+        run: |
+          set -euo pipefail
+          kubectl apply -f https://infra.tekton.dev/tekton-releases/pipeline/previous/v1.16.0/release.yaml
+          kubectl rollout status -n tekton-pipelines deployment/tekton-pipelines-controller --timeout=300s
+          kubectl rollout status -n tekton-pipelines deployment/tekton-pipelines-webhook --timeout=300s
+      - name: Execute all four real Tekton tasks
+        shell: bash
+        run: |
+          set -euo pipefail
+          kubectl apply -f tax-calculator/tasks.yaml
+          kubectl apply -f tax-calculator/tekton-local-support-tasks.yaml
+          kubectl apply -f tax-calculator/pipeline.yaml
+          RUN_RESOURCE=$(kubectl create -f tax-calculator/run.yaml -o name)
+          RUN="${RUN_RESOURCE##*/}"
+          echo "Created PipelineRun $RUN"
+          OK=false
+          for i in {1..120}; do
+            RESULT=$(kubectl get pipelinerun "$RUN" -o jsonpath='{.status.conditions[?(@.type=="Succeeded")].status}' 2>/dev/null || true)
+            if [ "$RESULT" = "True" ]; then OK=true; break; fi
+            if [ "$RESULT" = "False" ]; then break; fi
+            sleep 5
+          done
+          kubectl get pipelineruns,taskruns -o wide
+          [ "$OK" = true ]
+      - name: Retrieve the image built by Tekton
+        shell: bash
+        run: |
+          set -euo pipefail
+          PVC=$(kubectl get pvc -o jsonpath='{.items[0].metadata.name}')
+          test -n "$PVC"
+          cat <<EOF | kubectl apply -f -
+          apiVersion: v1
+          kind: Pod
+          metadata:
+            name: artifact-reader
+          spec:
+            containers:
+              - name: reader
+                image: alpine:3.20
+                command: ["/bin/sh", "-c", "sleep 1800"]
+                volumeMounts:
+                  - name: artifact
+                    mountPath: /mnt/artifact
+            volumes:
+              - name: artifact
+                persistentVolumeClaim:
+                  claimName: $PVC
+          EOF
+          kubectl wait --for=condition=Ready pod/artifact-reader --timeout=180s
+          kubectl cp artifact-reader:/mnt/artifact/tax-calculator/tekton-image.tar /tmp/tekton-image.tar
+          docker load -i /tmp/tekton-image.tar
+          docker image inspect tax-calculator:tekton-test >/dev/null
+      - name: Install and sign into IBM Cloud
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL https://clis.cloud.ibm.com/install/linux | sh
+          ibmcloud plugin install container-registry -f
+          ibmcloud plugin install code-engine -f
+          ibmcloud login --apikey "$IBM_CLOUD_API_KEY" -r "$IBM_REGION" -g "$RESOURCE_GROUP"
+          ibmcloud cr region-set "$REGISTRY_REGION"
+          ibmcloud cr login
+          ibmcloud ce project select --name "$CODE_ENGINE_PROJECT"
+      - name: Task 5 - Push Tekton-built image to IBM Container Registry
+        shell: bash
+        run: |
+          set -euo pipefail
+          IMAGE="$REGISTRY_HOST/$REGISTRY_NAMESPACE/tax-calculator:tekton-${{ github.run_number }}"
+          echo "PUBLISHED_IMAGE=$IMAGE" >> "$GITHUB_ENV"
+          docker tag tax-calculator:tekton-test "$IMAGE"
+          {
+            echo "$ docker push $IMAGE"
+            docker push "$IMAGE"
+          } 2>&1 | tee tax-calculator/05-docker-icr-push
+          grep -q 'digest: sha256:' tax-calculator/05-docker-icr-push
+      - name: Task 6 - Deploy to IBM Cloud Code Engine
+        shell: bash
+        run: |
+          set -euo pipefail
+          API_KEY_FILE=$(mktemp)
+          trap 'rm -f "$API_KEY_FILE"' EXIT
+          chmod 600 "$API_KEY_FILE"
+          printf '%s' "$IBM_CLOUD_API_KEY" > "$API_KEY_FILE"
+          if ibmcloud ce registry get --name tax-calculator-icr >/dev/null 2>&1; then
+            ibmcloud ce registry update --name tax-calculator-icr --server "$REGISTRY_HOST" --username iamapikey --password-from-file "$API_KEY_FILE"
+          else
+            ibmcloud ce registry create --name tax-calculator-icr --server "$REGISTRY_HOST" --username iamapikey --password-from-file "$API_KEY_FILE"
+          fi
+          {
+            if ibmcloud ce app get --name tax-calculator >/dev/null 2>&1; then
+              echo "$ ibmcloud ce app update --name tax-calculator --image $PUBLISHED_IMAGE --registry-secret tax-calculator-icr --port 80"
+              ibmcloud ce app update --name tax-calculator --image "$PUBLISHED_IMAGE" --registry-secret tax-calculator-icr --port 80
+            else
+              echo "$ ibmcloud ce app create --name tax-calculator --image $PUBLISHED_IMAGE --registry-secret tax-calculator-icr --port 80"
+              ibmcloud ce app create --name tax-calculator --image "$PUBLISHED_IMAGE" --registry-secret tax-calculator-icr --port 80
+            fi
+            echo "$ ibmcloud ce app get --name tax-calculator"
+            ibmcloud ce app get --name tax-calculator
+          } 2>&1 | tee tax-calculator/06-deployed-on-cloud
+          URL=$(ibmcloud ce app get --name tax-calculator --output url)
+          test -n "$URL"
+          echo "IBM_DEPLOYED_URL=$URL" >> "$GITHUB_ENV"
+          echo "Application URL: $URL" | tee -a tax-calculator/06-deployed-on-cloud
+          OK=false
+          for i in {1..30}; do
+            if curl -fsSL --connect-timeout 10 "$URL" -o /tmp/ibm-tax-calculator.html; then
+              if grep -q "Tax Calculator" /tmp/ibm-tax-calculator.html; then OK=true; break; fi
+            fi
+            sleep 10
+          done
+          [ "$OK" = true ]
+          echo "HTTP verification succeeded: page contains Tax Calculator" | tee -a tax-calculator/06-deployed-on-cloud
+      - name: Task 10 - Screenshot real IBM Cloud deployment
+        shell: bash
+        run: |
+          set -euo pipefail
+          CHROME=$(command -v google-chrome || command -v google-chrome-stable || command -v chromium)
+          "$CHROME" --headless=new --no-sandbox --disable-dev-shm-usage --disable-gpu --window-size=1440,900 --screenshot="$PWD/tax-calculator/10-final-output.png" "$IBM_DEPLOYED_URL"
+          test -s tax-calculator/10-final-output.png
+      - name: Save authenticated deployment evidence to GitHub
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tax-calculator/05-docker-icr-push tax-calculator/06-deployed-on-cloud tax-calculator/10-final-output.png
+          git commit -m "Record real IBM Cloud ICR push, Code Engine deployment, and screenshot [skip ci]"
+          git push origin main
