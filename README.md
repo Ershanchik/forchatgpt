@@ -17,7 +17,7 @@ Enter:
 
 Formula: **Simple Interest = p × r × t / 100**.
 
-Example: principal `1000`, rate `5`, time `2` gives simple interest `100`.
+Example: principal `1000`, annual rate `5%`, and time `2 years` gives simple interest `100.00`.
 
 ### Project files
 
