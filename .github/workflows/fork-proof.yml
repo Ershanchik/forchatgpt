@@ -1,0 +1,33 @@
+name: Capture verified GitHub fork evidence
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/fork-proof.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  capture-proof:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Run curl and save terminal output
+        shell: bash
+        run: |
+          set -euo pipefail
+          {
+            echo '$ curl -sS -f -L https://api.github.com/repos/Ershanchik/mcino-Introduction-to-Git-and-GitHub | jq "{full_name, fork, parent: .parent.full_name}"'
+            curl -sS -f -L https://api.github.com/repos/Ershanchik/mcino-Introduction-to-Git-and-GitHub | jq '{full_name, fork, parent: .parent.full_name}'
+          } | tee forked-repo
+          grep -q '"fork": true' forked-repo
+          grep -q 'ibm-developer-skills-network/mcino-Introduction-to-Git-and-GitHub' forked-repo
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add forked-repo
+          git commit -m "Save verified curl evidence for GitHub fork [skip ci]"
+          git push origin main
