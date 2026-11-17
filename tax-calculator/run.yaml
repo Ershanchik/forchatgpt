@@ -9,12 +9,7 @@ spec:
     - name: repo-url
       value: https://github.com/Ershanchik/forchatgpt.git
     - name: image
-      value: icr.io/REPLACE_WITH_YOUR_NAMESPACE/tax-calculator:latest
+      value: tax-calculator:tekton-test
   workspaces:
     - name: shared
-      volumeClaimTemplate:
-        spec:
-          accessModes: [ReadWriteOnce]
-          resources:
-            requests:
-              storage: 1Gi
+      emptyDir: {}
