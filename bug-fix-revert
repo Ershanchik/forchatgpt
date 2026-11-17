@@ -1,0 +1,22 @@
+$ curl -sS -f -L https://api.github.com/repos/Ershanchik/mcino-Introduction-to-Git-and-GitHub/pulls/1 | jq "{number, state, html_url, head: {ref: .head.ref, repo: .head.repo.full_name, fork: .head.repo.fork}, base: {ref: .base.ref, repo: .base.repo.full_name}}"
+{
+  "number": 1,
+  "state": "open",
+  "html_url": "https://github.com/Ershanchik/mcino-Introduction-to-Git-and-GitHub/pull/1",
+  "head": {
+    "ref": "bug-fix-revert",
+    "repo": "Ershanchik/mcino-Introduction-to-Git-and-GitHub",
+    "fork": true
+  },
+  "base": {
+    "ref": "main",
+    "repo": "Ershanchik/mcino-Introduction-to-Git-and-GitHub"
+  }
+}
+
+$ curl -sS -f -L https://api.github.com/repos/Ershanchik/mcino-Introduction-to-Git-and-GitHub | jq "{full_name, fork, parent: .parent.full_name}"
+{
+  "full_name": "Ershanchik/mcino-Introduction-to-Git-and-GitHub",
+  "fork": true,
+  "parent": "ibm-developer-skills-network/mcino-Introduction-to-Git-and-GitHub"
+}
